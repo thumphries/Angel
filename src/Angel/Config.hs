@@ -70,7 +70,9 @@ buildConfigMap = HM.foldlWithKey' addToMap M.empty . addDefaults
             in
         M.insert basekey newprog m
       | otherwise = m
-      where (basekey, '.':localkey) = break (== '.') $ T.unpack n
+      where (basekey, localkey) = case break (== '.') $ T.unpack n of
+                                    (b, '.':k) -> (b, k)
+                                    _ -> error "invalid name"
 
 addDefaults :: HM.HashMap Name Value -> HM.HashMap Name Value
 addDefaults conf = foldl' addDefault conf progs

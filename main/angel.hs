@@ -17,16 +17,12 @@ import Data.Monoid ( (<>) )
 import Control.Monad.Reader
 import Options.Applicative (ParserInfo, ReadM)
 import qualified Options.Applicative as O
-import System.Environment (getArgs)
-import System.Exit (exitFailure,
-                    exitSuccess)
 import System.Posix.Signals (installHandler,
                              sigHUP,
                              sigTERM,
                              sigINT,
                              Handler(Catch))
 import System.IO (hSetBuffering,
-                  hPutStrLn,
                   BufferMode(LineBuffering),
                   stdout,
                   stderr)
@@ -138,12 +134,12 @@ runWithConfigPath = do
 
     -- The wake signal, set by the HUP handler to wake the monitor loop
     wakeSig <- liftIO $ newTVarIO Nothing
-    liftIO $ installHandler sigHUP (Catch $ handleHup wakeSig) Nothing
+    _hhup <- liftIO $ installHandler sigHUP (Catch $ handleHup wakeSig) Nothing
 
     -- Handle dying
     bye <- liftIO newEmptyMVar
-    liftIO $ installHandler sigTERM (Catch $ handleExit bye) Nothing
-    liftIO $ installHandler sigINT (Catch $ handleExit bye) Nothing
+    _hterm <- liftIO $ installHandler sigTERM (Catch $ handleExit bye) Nothing
+    _hint <- liftIO $ installHandler sigINT (Catch $ handleExit bye) Nothing
 
     -- Fork off an ongoing state monitor to watch for inconsistent state
     forkIO' $ pollStale sharedGroupConfig
@@ -151,7 +147,7 @@ runWithConfigPath = do
     -- Finally, run the config load/monitor thread
     forkIO' $ forever $ monitorConfig configPath sharedGroupConfig wakeSig
 
-    liftIO $ takeMVar bye
+    _b <- liftIO $ takeMVar bye
 
     logger' V2 "INT | TERM received; initiating shutdown..."
     logger' V2 "  1. Clearing config"
@@ -161,10 +157,6 @@ runWithConfigPath = do
     logger' V2 "  2. Forcing sync to kill running processes"
     syncSupervisors sharedGroupConfig
     logger' V2 "That's all folks!"
-
-errorExit :: String -> IO ()
-errorExit msg = hPutStrLn stderr msg >> exitFailure
-
 
 forkIO' :: AngelM () -> AngelM ()
 forkIO' f = do

@@ -14,7 +14,7 @@ import Data.Maybe (isJust)
 import System.IO.Error ( catchIOError
                        , isDoesNotExistError)
 import System.Process (ProcessHandle)
-import System.Process.Internals ( ProcessHandle__(OpenHandle, ClosedHandle)
+import System.Process.Internals ( ProcessHandle__(OpenHandle, OpenExtHandle, ClosedHandle)
                                 , withProcessHandle )
 import System.Posix.Types (ProcessID)
 import System.Posix.Process ( ProcessStatus
@@ -27,6 +27,7 @@ import System.Posix.Signals ( Signal
 withPid :: (ProcessID -> IO a) -> ProcessHandle -> IO (Maybe a)
 withPid action ph = withProcessHandle ph callback
   where callback (ClosedHandle _) = return Nothing
+        callback (OpenExtHandle _ _ _) = return Nothing
         callback (OpenHandle pid) = do res <- action pid
                                        return (Just res)
 

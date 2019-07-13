@@ -17,7 +17,6 @@ import System.Process ( createProcess
                       , proc
                       , waitForProcess
                       , ProcessHandle
-                      , CreateProcess
                       , std_out
                       , std_err
                       , std_in
@@ -76,8 +75,8 @@ ifEmpty :: String -> a -> a -> a
 ifEmpty s a b = if s == "" then a else b
 
 switchUser :: String -> IO ()
-switchUser name = do
-    userEntry <- U.getUserEntryForName name
+switchUser n = do
+    userEntry <- U.getUserEntryForName n
     U.setUserID $ U.userID userEntry
 
 -- |launch the program specified by `id'`, opening (and closing) the
@@ -98,7 +97,7 @@ supervise sharedGroupConfig id' = do
                 logProcessSpawn Nothing = return ()
                 logProcessSpawn (Just (cmd, args)) = do
                     logger' V1 $ "Spawning process: " ++ cmd ++ " with env " ++ ((show . D.env) my_spec) ++ (maybe "" (" as user: " ++) (D.user my_spec))
-                    superviseSpawner my_spec cfg cmd args sharedGroupConfig id' onValidHandle onPidError
+                    superviseSpawner my_spec cfg cmd args id' onValidHandle onPidError
 
             logProcessSpawn $ fmap (cmdSplit) (exec my_spec)
 
@@ -127,7 +126,7 @@ supervise sharedGroupConfig id' = do
         cmdSplit fullcmd = (head parts, tail parts)
             where parts = (filter (/="") . map strip . split ' ') fullcmd
 
-        find_spec cfg id' = M.findWithDefault defaultProgram id' (spec cfg)
+        find_spec cfg i = M.findWithDefault defaultProgram i (spec cfg)
 
         updateRunningPid my_spec mpid mlpid = liftIO $ atomically $ do
             wcfg <- readTVar sharedGroupConfig
@@ -144,22 +143,21 @@ superviseSpawner
   -> GroupConfig
   -> String
   -> [String]
-  -> TVar GroupConfig
   -> String
   -> (Program -> Maybe ProcessHandle -> ProcessHandle -> AngelM ())
   -> (Program -> Maybe ProcessHandle -> ProcessHandle -> AngelM ())
   -> AngelM ()
-superviseSpawner the_spec cfg cmd args sharedGroupConfig id' onValidHandleAction onPidErrorAction = do
+superviseSpawner the_spec config command argv id' onValidHandleAction onPidErrorAction = do
     opts <- ask
     let io = runAngelM opts
     liftIO $ do
         maybe (return ()) switchUser (D.user the_spec)
         -- start the logger process or if non is configured
         -- use the files specified in the configuration
-        (attachOut, attachErr, lHandle) <- io $ makeFiles the_spec cfg
+        (attachOut, attachErr, lHandle) <- io $ makeFiles the_spec config
 
         let
-            procSpec = (proc cmd args) {
+            procSpec = (proc command argv) {
               std_out = attachOut,
               std_err = attachErr,
               cwd = workingDir the_spec,
@@ -204,7 +202,7 @@ superviseSpawner the_spec cfg cmd args sharedGroupConfig id' onValidHandleAction
                         cwd     = workingDir my_spec
                       }
 
-                      forkIO $ runAngelM opts $ logProcess (\v m -> loggerSink v m) logpHandle
+                      _ <- forkIO $ runAngelM opts $ logProcess (\v m -> loggerSink v m) logpHandle
 
                       return (UseHandle (fromJust inPipe),
                               UseHandle (fromJust inPipe),
@@ -215,7 +213,7 @@ superviseSpawner the_spec cfg cmd args sharedGroupConfig id' onValidHandleAction
 logProcess :: (Verbosity -> String -> AngelM ()) -> ProcessHandle -> AngelM ()
 logProcess logSink pHandle = do
   logSink V2 "RUNNING"
-  liftIO $ waitForProcess pHandle
+  _ <- liftIO $ waitForProcess pHandle
   logSink V2 "ENDED"
 
 --TODO: paralellize

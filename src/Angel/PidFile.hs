@@ -13,7 +13,7 @@ import System.Process ( CreateProcess
 
 -- Wish I didn't have to do this :(
 import System.Process.Internals ( PHANDLE
-                                , ProcessHandle__(OpenHandle, ClosedHandle)
+                                , ProcessHandle__(OpenHandle, OpenExtHandle, ClosedHandle)
                                 , withProcessHandle
                                 )
 import System.Posix.Files ( removeLink
@@ -61,5 +61,6 @@ clearPIDFile pidFile = do ex <- fileExist pidFile
 
 getPID :: ProcessHandle -> IO (Maybe PHANDLE)
 getPID pHandle = withProcessHandle pHandle getPID'
-  where getPID' h @ (OpenHandle t) = return (Just t)
-        getPID' h @ (ClosedHandle t) = return Nothing
+  where getPID' (OpenHandle t) = return (Just t)
+        getPID' (OpenExtHandle _ _ _) = return Nothing -- Windows
+        getPID' (ClosedHandle _) = return Nothing
