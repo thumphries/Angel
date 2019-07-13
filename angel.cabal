@@ -34,7 +34,18 @@ source-repository head
 
 Executable angel
   Main-is: main/angel.hs
-  Ghc-Options: -O2 -threaded -rtsopts
+
+  Ghc-Options:
+    -O2
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+
   Build-depends:
       base
     , angel
@@ -45,7 +56,19 @@ Executable angel
     , unix
 
 Library
+  Ghc-Options:
+    -O2
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+
   Hs-Source-Dirs: src
+
   Build-depends:
       base >= 4.5 && < 5
     , configurator >= 0.1
@@ -99,4 +122,12 @@ test-suite spec
     , transformers
     , unix >= 2.4
     , unordered-containers >= 0.1.4
-  Ghc-Options: -threaded -rtsopts -with-rtsopts=-N
+  Ghc-Options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
