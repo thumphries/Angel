@@ -89,5 +89,6 @@ patientlyGetProcessExitCode ph = sleepSecs 1 >> getProcessHandleStatus ph
 dummyOptions :: Options
 dummyOptions = Options {
       configFile = ""
+    , userargument = Nothing
     , verbosity  = V0
     }
